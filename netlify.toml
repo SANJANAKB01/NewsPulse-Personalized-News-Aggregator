@@ -1,0 +1,17 @@
+[build]
+  base = "frontend"
+  command = "npm run build"
+  publish = "dist"
+
+# Proxy all /api/* requests to your live Render backend
+[[redirects]]
+  from = "/api/*"
+  to = "https://newspulse-personalized-news-aggregator.onrender.com/api/:splat"
+  status = 200
+  force = true
+
+# SPA fallback - all unknown routes go to index.html (so React Router works)
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
