@@ -1,8 +1,4 @@
-"""WSGI entry point for production (gunicorn, Render, Heroku, etc.).
-
-Usage:
-    gunicorn wsgi:app --bind 0.0.0.0:$PORT --workers 2 --timeout 60
-"""
+"""WSGI entry point for production (gunicorn, Render, Heroku, etc.)."""
 import os
 from dotenv import load_dotenv
 
