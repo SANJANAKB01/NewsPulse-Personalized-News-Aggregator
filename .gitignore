@@ -32,7 +32,6 @@ logs/
 
 # Frontend
 node_modules/
-dist/
 .vite/
 *.tsbuildinfo
 
