@@ -11,7 +11,7 @@ class BaseConfig:
     SECRET_KEY = _env("SECRET_KEY", "dev-secret-change-me-in-production")
     DEBUG = _env("FLASK_DEBUG", "0") == "1"
 
-    SQLALCHEMY_DATABASE_URI = _env("DATABASE_URL", "postgresql+psycopg2://news:news@localhost:5432/news_aggregator")
+    SQLALCHEMY_DATABASE_URI = _env("DATABASE_URL", "sqlite:///news.db")
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SQLALCHEMY_ENGINE_OPTIONS = {"pool_pre_ping": True}
 
@@ -29,7 +29,7 @@ class BaseConfig:
     REDDIT_USER_AGENT = _env("REDDIT_USER_AGENT", "news-aggregator/1.0")
     REDDIT_SUBREDDITS = _env("REDDIT_SUBREDDITS", "worldnews,technology,science,business,sports,UpliftingNews").split(",")
 
-    GDELT_BASE = _env("GDELT_BASE", "https://api.gdeltproject.org/api/v2")
+    GDELT_BASE = "https://api.gdeltproject.org/api/v2"
 
     GUARDIAN_API_KEY = _env("GUARDIAN_API_KEY", "")
     NYT_API_KEY = _env("NYT_API_KEY", "")
@@ -45,10 +45,10 @@ class BaseConfig:
     ENABLE_GNEWS = _env("ENABLE_GNEWS", "0") == "1"
 
     EMBEDDING_MODEL = _env("EMBEDDING_MODEL", "all-MiniLM-L6-v2")
-    USE_EMBEDDINGS = _env("USE_EMBEDDINGS", "1") == "1"
+    USE_EMBEDDINGS = _env("USE_EMBEDDINGS", "0") == "1"
     RECOMMEND_TOP_K = int(_env("RECOMMEND_TOP_K", "30"))
 
-    SCHEDULER_FETCH_MINUTES = int(_env("SCHEDULER_FETCH_MINUTES", "30"))
+    SCHEDULER_FETCH_MINUTES = int(_env("SCHEDULER_FETCH_MINUTES", "60"))
     SCHEDULER_ENABLED = _env("SCHEDULER_ENABLED", "1") == "1"
 
     SMTP_HOST = _env("SMTP_HOST", "")
@@ -68,10 +68,14 @@ class TestingConfig(BaseConfig):
     SCHEDULER_ENABLED = False
 
 
+class ProductionConfig(BaseConfig):
+    DEBUG = False
+
+
 config_map = {
     "development": DevelopmentConfig,
     "testing": TestingConfig,
-    "production": BaseConfig,
+    "production": ProductionConfig,
 }
 
 
