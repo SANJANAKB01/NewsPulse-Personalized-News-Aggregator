@@ -42,6 +42,7 @@ def register_jobs(app, scheduler) -> None:
 
 
 def _fetch_and_process_job(app) -> None:
+    import os
     from .fetcher import fetch_all
     from .processor import tokenize, categorize
     from .sentiment import analyze
@@ -49,8 +50,18 @@ def _fetch_and_process_job(app) -> None:
 
     with app.app_context():
         log.info("Scheduled fetch starting at %s", datetime.now(timezone.utc).isoformat())
+
+        # Build a config-like object that reads env vars directly (gunicorn workers
+        # sometimes lose access to app.config in background threads)
+        class EnvConfig:
+            def __getattr__(self, name):
+                if name in os.environ:
+                    return os.environ[name]
+                raise AttributeError(f"'{name}' not in env")
+
+        cfg = EnvConfig()
         try:
-            raw = fetch_all(app.config)
+            raw = fetch_all(cfg)
         except Exception as exc:  # noqa: BLE001
             log.error("Fetch failed: %s", exc)
             return
