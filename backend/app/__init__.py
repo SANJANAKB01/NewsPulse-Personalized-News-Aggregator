@@ -2,9 +2,9 @@
 from __future__ import annotations
 
 import logging
-from dotenv import load_dotenv       # ← ADD THIS
+from dotenv import load_dotenv
 
-load_dotenv()                         # ← ADD THIS
+load_dotenv()
 
 from flask import Flask, jsonify
 from flask_cors import CORS
@@ -54,12 +54,14 @@ def create_app(config_name: str | None = None) -> Flask:
             }
         )
 
-    # Create tables and auto-seed if empty (runs on every boot if DB is empty)
+    # Create tables and auto-seed if empty
     with app.app_context():
         try:
             db.create_all()
             from .models import Article
-            if Article.query.count() == 0:
+            count = Article.query.count()
+            app.logger.info("DB check: %d articles found", count)
+            if count == 0:
                 app.logger.info("Database is empty - auto-seeding from news_data.json...")
                 try:
                     from .seed_runner import run_seed
@@ -67,17 +69,19 @@ def create_app(config_name: str | None = None) -> Flask:
                     app.logger.info("Auto-seed complete: %d articles loaded", inserted)
                 except Exception as seed_exc:
                     app.logger.error("Auto-seed failed: %s", seed_exc)
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             app.logger.warning("db.create_all skipped: %s", exc)
 
     register_error_handlers(app)
 
     # Background scheduler for live updates
-    if app.config["SCHEDULER_ENABLED"] and not scheduler.running:
-        _setup_scheduler(app)
+    if app.config.get("SCHEDULER_ENABLED", True) and not scheduler.running:
         try:
+            from .services.scheduler import register_jobs
+            register_jobs(app, scheduler)
             scheduler.start()
-        except Exception as exc:  # noqa: BLE001
+            app.logger.info("Scheduler started")
+        except Exception as exc:
             app.logger.warning("Scheduler failed to start: %s", exc)
 
     @app.teardown_appcontext
@@ -93,12 +97,5 @@ def _check_db(app: Flask) -> bool:
     try:
         db.session.execute(db.text("SELECT 1"))
         return True
-    except Exception:  # noqa: BLE001
+    except Exception:
         return False
-
-
-def _setup_scheduler(app: Flask):
-    """Register background jobs for live news fetching."""
-    from .services.scheduler import register_jobs
-
-    register_jobs(app, scheduler)
