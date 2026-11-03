@@ -2,11 +2,12 @@
 from __future__ import annotations
 
 import logging
+import os
 from dotenv import load_dotenv
 
 load_dotenv()
 
-from flask import Flask, jsonify
+from flask import Flask, jsonify, send_from_directory, request as flask_request
 from flask_cors import CORS
 
 from .config import get_config
@@ -73,6 +74,38 @@ def create_app(config_name: str | None = None) -> Flask:
             app.logger.warning("db.create_all skipped: %s", exc)
 
     register_error_handlers(app)
+
+    # ---- Serve React frontend from frontend/dist/ ----
+    # Path to the built React app: <repo>/frontend/dist/
+    FRONTEND_DIR = os.path.join(
+        os.path.dirname(os.path.dirname(os.path.dirname(__file__))),
+        "frontend", "dist"
+    )
+
+    @app.route("/")
+    def serve_index():
+        index_path = os.path.join(FRONTEND_DIR, "index.html")
+        if os.path.exists(index_path):
+            return send_from_directory(FRONTEND_DIR, "index.html")
+        return jsonify({
+            "status": "ok",
+            "message": "Backend running. Frontend not built yet."
+        })
+
+    @app.route("/assets/<path:path>")
+    def serve_assets(path):
+        return send_from_directory(os.path.join(FRONTEND_DIR, "assets"), path)
+
+    @app.errorhandler(404)
+    def spa_fallback(e):
+        # Don't intercept API routes - let them return JSON 404
+        if flask_request.path.startswith("/api/"):
+            return jsonify({"error": "Resource not found"}), 404
+        # SPA fallback - serve index.html for React Router routes (/feed, /search, etc.)
+        index_path = os.path.join(FRONTEND_DIR, "index.html")
+        if os.path.exists(index_path):
+            return send_from_directory(FRONTEND_DIR, "index.html")
+        return jsonify({"error": "Resource not found"}), 404
 
     # Background scheduler for live updates
     if app.config.get("SCHEDULER_ENABLED", True) and not scheduler.running:
