@@ -5,18 +5,15 @@ import json
 import logging
 from datetime import datetime, timezone
 
-from ..extensions import db, scheduler as bg_scheduler
+from ..extensions import db
 
 log = logging.getLogger(__name__)
 
 
 def register_jobs(app, scheduler) -> None:
-    from ..config import get_config
-
     cfg = app.config
+    fetch_minutes = max(5, int(cfg.get("SCHEDULER_FETCH_MINUTES", 60)))
 
-    # Fetch + ingest job
-    fetch_minutes = max(5, int(cfg.get("SCHEDULER_FETCH_MINUTES", 30)))
     scheduler.add_job(
         _fetch_and_process_job,
         "interval",
@@ -27,7 +24,6 @@ def register_jobs(app, scheduler) -> None:
         next_run_time=datetime.now(timezone.utc),
     )
 
-    # Daily newsletter digest (mocked)
     scheduler.add_job(
         _send_newsletter_digests,
         "cron",
@@ -51,7 +47,7 @@ def _fetch_and_process_job(app) -> None:
         log.info("Scheduled fetch starting at %s", datetime.now(timezone.utc).isoformat())
         try:
             raw = fetch_all(app.config)
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             log.error("Fetch failed: %s", exc)
             return
 
@@ -59,7 +55,6 @@ def _fetch_and_process_job(app) -> None:
             log.info("No articles fetched")
             return
 
-        # Dedup by external_id
         existing_ids = {
             row[0]
             for row in db.session.query(Article.external_id)
@@ -103,15 +98,13 @@ def _fetch_and_process_job(app) -> None:
                 is_breaking=_is_breaking(raw_article, topic, sentiment_label),
             )
 
-            # Embedding (best-effort; skipped if model unavailable)
-            if app.config.get("USE_EMBEDDINGS", True):
+            if app.config.get("USE_EMBEDDINGS", False):
                 try:
-                    emb = None
                     from .recommender import embed_text
                     emb = embed_text(article.title + " " + (article.description or ""))
                     if emb:
                         article.embedding = json.dumps(emb)
-                except Exception as exc:  # noqa: BLE001
+                except Exception as exc:
                     log.debug("Embedding skipped: %s", exc)
 
             db.session.add(article)
@@ -120,24 +113,22 @@ def _fetch_and_process_job(app) -> None:
         try:
             db.session.commit()
             log.info("Ingested %d new articles", new_count)
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             db.session.rollback()
             log.error("Ingest commit failed: %s", exc)
 
 
-def _is_breaking(raw_article: dict, topic: str, sentiment: str) -> bool:
+def _is_breaking(raw_article, topic, sentiment):
     title = (raw_article.get("title") or "").lower()
     keywords = ["breaking", "urgent", "just in", "live", "alert", "developing"]
     return any(kw in title for kw in keywords)
 
 
 def _send_newsletter_digests(app) -> None:
-    from ..models import NewsletterSubscriber, Article
+    from ..models import NewsletterSubscriber
 
     with app.app_context():
         subscribers = NewsletterSubscriber.query.filter_by(confirmed=True, frequency="daily").all()
         log.info("Newsletter digest: %d subscribers", len(subscribers))
-        # Email sending is intentionally stubbed - configure SMTP in production
-        # Iterate subscribers, gather top articles per their topics, build digest
         for sub in subscribers:
             log.info("Would send digest to %s", sub.email)

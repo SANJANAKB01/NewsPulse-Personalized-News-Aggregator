@@ -9,4 +9,8 @@ requests==2.32.3
 APScheduler==3.10.4
 nltk==3.8.1
 python-dotenv==1.0.1
+<<<<<<< HEAD
 gunicorn==22.0.0
+=======
+gunicorn==22.0.0
+>>>>>>> 385e7fb4506a8b97a43c05200c25bb5b106c63c5

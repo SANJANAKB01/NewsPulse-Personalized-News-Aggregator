@@ -4,7 +4,6 @@ __pycache__/
 *.egg-info/
 *.egg
 build/
-dist/
 .eggs/
 *.so
 
@@ -32,7 +31,6 @@ logs/
 
 # Frontend
 node_modules/
-dist/
 .vite/
 *.tsbuildinfo
 
