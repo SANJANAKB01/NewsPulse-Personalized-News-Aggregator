@@ -1,0 +1,50 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+*.egg
+build/
+dist/
+.eggs/
+*.so
+
+# Virtual envs
+venv/
+.venv/
+env/
+myenv/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+
+# Env files
+.env
+.env.local
+.env.*.local
+
+# Logs
+*.log
+logs/
+
+# Frontend
+node_modules/
+dist/
+.vite/
+*.tsbuildinfo
+
+# Database
+*.db
+*.sqlite3
+*.sqlite
+
+# Test / coverage
+.pytest_cache/
+.coverage
+htmlcov/
+
+# NLTK data (downloaded at runtime)
+nltk_data/
