@@ -1,8 +1,4 @@
-"""Seed runner that can be called from app/__init__.py to auto-populate the DB.
-
-Used on Render's ephemeral filesystem — re-seeds from news_data.json on every
-boot if the DB is empty.
-"""
+"""Seed runner that auto-populates the DB from news_data.json on boot."""
 import json
 import os
 from datetime import datetime, timezone
@@ -14,10 +10,9 @@ from .services.sentiment import analyze
 
 
 def run_seed(app):
-    """Import articles from news_data.json into the database."""
     json_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "news_data.json")
     if not os.path.exists(json_path):
-        app.logger.warning("news_data.json not found at %s - skipping seed", json_path)
+        app.logger.warning("news_data.json not found at %s", json_path)
         return 0
 
     with open(json_path, "r", encoding="utf-8") as f:
@@ -28,14 +23,12 @@ def run_seed(app):
         app.logger.warning("No articles found in news_data.json")
         return 0
 
-    ext_ids_to_check = [f"newsapi::{a.get('url')}" for a in raw_articles if a.get("url")]
+    ext_ids = [f"newsapi::{a.get('url')}" for a in raw_articles if a.get("url")]
     existing_ids = set()
-    if ext_ids_to_check:
+    if ext_ids:
         existing_ids = {
             row[0] for row in
-            db.session.query(Article.external_id).filter(
-                Article.external_id.in_(ext_ids_to_check)
-            ).all()
+            db.session.query(Article.external_id).filter(Article.external_id.in_(ext_ids)).all()
         }
 
     inserted = 0
