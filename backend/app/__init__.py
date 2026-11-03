@@ -54,10 +54,19 @@ def create_app(config_name: str | None = None) -> Flask:
             }
         )
 
-    # Create tables on first request if missing (dev convenience)
+    # Create tables and auto-seed if empty (runs on every boot if DB is empty)
     with app.app_context():
         try:
             db.create_all()
+            from .models import Article
+            if Article.query.count() == 0:
+                app.logger.info("Database is empty - auto-seeding from news_data.json...")
+                try:
+                    from .seed_runner import run_seed
+                    inserted = run_seed(app)
+                    app.logger.info("Auto-seed complete: %d articles loaded", inserted)
+                except Exception as seed_exc:
+                    app.logger.error("Auto-seed failed: %s", seed_exc)
         except Exception as exc:  # noqa: BLE001
             app.logger.warning("db.create_all skipped: %s", exc)
 
